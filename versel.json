@@ -1,0 +1,5 @@
+{
+  "rewriteRules": [
+    { "source": "/(.*)", "destination": "api/index.py" }
+  ]
+}
