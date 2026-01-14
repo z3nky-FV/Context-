@@ -1,10 +1,4 @@
-aiogram
-openai
-trafilatura
-beautifulsoup4
-asyncpg
-python-dotenv
 fastapi
 jinja2
+asyncpg
 uvicorn
-requests

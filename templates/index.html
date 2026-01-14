@@ -1,29 +1,25 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Context+</title>
+    <title>Context+ Memory</title>
     <style>
-        body { background: #0f0f0f; color: #e0e0e0; font-family: -apple-system, sans-serif; padding: 20px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
-        .card { background: #1a1a1a; padding: 20px; border-radius: 15px; border: 1px solid #333; transition: 0.3s; }
-        .card:hover { border-color: #3390ec; transform: translateY(-5px); }
-        .title { color: #3390ec; font-size: 1.2em; text-decoration: none; font-weight: bold; margin-bottom: 10px; display: block; }
-        .summary { font-size: 0.9em; line-height: 1.5; color: #aaa; }
-        .tag { display: inline-block; background: #242424; padding: 4px 10px; border-radius: 5px; font-size: 0.75em; margin-top: 10px; margin-right: 5px; color: #3390ec; }
+        body { background: #111; color: #eee; font-family: sans-serif; padding: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; }
+        .card { background: #222; padding: 15px; border-radius: 12px; border-left: 5px solid #3390ec; }
+        .title { color: #3390ec; text-decoration: none; font-weight: bold; font-size: 1.1em; }
+        .tag { color: #3390ec; font-size: 0.8em; margin-right: 5px; }
     </style>
 </head>
 <body>
-    <h1>🧠 Мой Контекст</h1>
+    <h1>🧠 Моя Цифровая Память</h1>
     <div class="grid">
         {% for link in links %}
         <div class="card">
-            <a href="{{ link.url }}" target="_blank" class="title">{{ link.title }}</a>
-            <p class="summary">{{ link.summary }}</p>
-            {% for tag in link.tags %}
-            <span class="tag">#{{ tag.strip() }}</span>
-            {% endfor %}
+            <a href="{{ link.url }}" class="title">{{ link.title }}</a>
+            <p>{{ link.summary }}</p>
+            <div>{% for tag in link.tags %}<span class="tag">#{{ tag }}</span>{% endfor %}</div>
         </div>
         {% endfor %}
     </div>

@@ -5,12 +5,14 @@ import asyncpg
 import os
 
 app = FastAPI()
+# Указываем путь к папке с HTML
 templates = Jinja2Templates(directory="templates")
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
+    # Vercel сам подставит переменную POSTGRES_URL из настроек проекта
     conn = await asyncpg.connect(os.getenv("POSTGRES_URL"))
-    rows = await conn.fetch("SELECT title, summary, url, tags FROM links ORDER BY id DESC")
+    rows = await conn.fetch("SELECT title, summary, url, tags, created_at FROM links ORDER BY id DESC")
     await conn.close()
     
     links = [dict(row) for row in rows]
