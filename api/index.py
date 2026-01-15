@@ -1,76 +1,65 @@
-import os
-import requests
-from bs4 import BeautifulSoup
-from fastapi import FastAPI, Request
-from fastapi.templating import Jinja2Templates
-from aiogram import Bot, Dispatcher, types
-import psycopg2
-from psycopg2.extras import RealDictCursor
-from dotenv import load_dotenv
-
-load_dotenv()
-
-app = FastAPI()
-templates = Jinja2Templates(directory="templates")
-
-TOKEN = os.getenv("BOT_TOKEN")
-POSTGRES_URL = os.getenv("POSTGRES_URL")
-
-bot = Bot(token=TOKEN)
-dp = Dispatcher(bot)
-
-@app.get("/")
-async def index(request: Request, user_id: int = None):
-    links = []
-    if user_id:
-        try:
-            conn = psycopg2.connect(POSTGRES_URL)
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("SELECT * FROM links WHERE user_id = %s ORDER BY id DESC", (user_id,))
-            links = cur.fetchall()
-            cur.close()
-            conn.close()
-        except Exception as e:
-            print(f"DATABASE ERROR: {e}")
-    return templates.TemplateResponse("index.html", {"request": request, "links": links})
-
-@app.post(f"/api/webhook/{TOKEN}")
-async def bot_webhook(request: Request):
-    try:
-        update_data = await request.json()
-        update = types.Update(**update_data)
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ghost Memory</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root { --bg: #050505; --accent: #6366f1; --border: rgba(255,255,255,0.08); }
+        body { background: var(--bg); color: #fff; font-family: -apple-system, sans-serif; margin: 0; padding: 20px; overflow-x: hidden; }
         
-        if update.message and update.message.text:
-            text = update.message.text
-            chat_id = update.message.chat.id
-            user_id = update.message.from_user.id
+        .glow { position: fixed; width: 300px; height: 300px; background: var(--accent); filter: blur(100px); opacity: 0.1; z-index: -1; top: -50px; right: -50px; border-radius: 50%; }
+        
+        .search-bar { position: sticky; top: 0; background: var(--bg); padding: 10px 0 20px 0; z-index: 10; }
+        .search-bar input { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 12px; padding: 14px; color: #fff; outline: none; box-sizing: border-box; }
+        
+        .card { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 18px; padding: 18px; margin-bottom: 12px; text-decoration: none; color: inherit; display: block; transition: 0.2s; }
+        .card:active { transform: scale(0.98); background: rgba(255,255,255,0.05); }
+        
+        .card-title { font-size: 17px; font-weight: 700; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .card-desc { color: #888; font-size: 14px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        
+        .empty { text-align: center; color: #444; margin-top: 60px; font-size: 15px; }
+    </style>
+</head>
+<body>
+    <div class="glow"></div>
+    <div class="search-bar">
+        <input type="text" placeholder="Поиск в памяти..." id="search">
+    </div>
 
-            if text.startswith("http"):
-                # Попытка парсинга
-                try:
-                    res = requests.get(text, timeout=5, headers={"User-Agent": "Mozilla/5.0"})
-                    soup = BeautifulSoup(res.text, 'html.parser')
-                    title = soup.title.string if soup.title else text
-                except:
-                    title = text
-                
-                # Попытка записи в базу
-                conn = psycopg2.connect(POSTGRES_URL)
-                cur = conn.cursor()
-                cur.execute(
-                    "INSERT INTO links (url, title, summary, user_id) VALUES (%s, %s, %s, %s)",
-                    (text, title, "Сохранено", user_id)
-                )
-                conn.commit()
-                cur.close()
-                conn.close()
-                
-                await bot.send_message(chat_id, f"✅ Сохранено: {title}")
-            elif text == "/start":
-                await bot.send_message(chat_id, "Бот на Vercel готов!")
+    <div id="links-container">
+        {% if links %}
+            {% for link in links %}
+            <a href="{{ link.url }}" class="card">
+                <div class="card-title">{{ link.title }}</div>
+                <div class="card-desc">{{ link.summary }}</div>
+            </a>
+            {% endfor %}
+        {% else %}
+            <div class="empty">Здесь пока пусто... Пришли ссылку боту!</div>
+        {% endif %}
+    </div>
 
-        return {"status": "ok"}
-    except Exception as e:
-        # Эта строчка выведет реальную причину ошибки 500 в логи Vercel
-        print(f"CRITICAL ERROR: {e}")
-        return {"status": "error", "message": str(e)}
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.ready();
+
+        // Изоляция пользователей через URL
+        const params = new URLSearchParams(window.location.search);
+        if (tg.initDataUnsafe.user && !params.has('user_id')) {
+            window.location.search = `?user_id=${tg.initDataUnsafe.user.id}`;
+        }
+
+        // Живой поиск
+        document.getElementById('search').oninput = (e) => {
+            const query = e.target.value.toLowerCase();
+            document.querySelectorAll('.card').forEach(card => {
+                card.style.display = card.innerText.toLowerCase().includes(query) ? '' : 'none';
+            });
+        };
+    </script>
+</body>
+</html>
