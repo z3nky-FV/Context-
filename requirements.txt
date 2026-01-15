@@ -1,7 +1,6 @@
-fastapi
-uvicorn
-aiogram==2.23.1
-psycopg2-binary
+aiogram==3.3.0
+openai
+asyncpg
 requests
 beautifulsoup4
 python-dotenv
