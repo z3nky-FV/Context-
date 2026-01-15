@@ -3,7 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 from fastapi import FastAPI, Request
 from fastapi.templating import Jinja2Templates
-from aiogram import Bot, Dispatcher, types
+from aiogram import Bot, types
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
@@ -11,7 +11,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = FastAPI()
-templates = Jinja2Templates(directory="templates")
+
+# Исправляем путь к шаблонам (для Vercel и локального запуска)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+templates_dir = os.path.join(BASE_DIR, "templates")
+templates = Jinja2Templates(directory=templates_dir if os.path.isdir(templates_dir) else "templates")
 
 # Все ключи должны быть прописаны в Settings -> Environment Variables на Vercel!
 TOKEN = os.getenv("BOT_TOKEN")
@@ -19,7 +23,6 @@ POSTGRES_URL = os.getenv("POSTGRES_URL")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") # Твой ключ для ИИ
 
 bot = Bot(token=TOKEN)
-dp = Dispatcher(bot)
 
 def get_db_conn():
     return psycopg2.connect(POSTGRES_URL, connect_timeout=10)
