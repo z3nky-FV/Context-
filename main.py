@@ -67,19 +67,25 @@ async def handle_link(message: Message):
     url = re.search(r'https?://\S+', message.text).group(0)
     msg = await message.answer("🔄 Анализирую ссылку...")
     
-    content = await asyncio.to_thread(get_page_content, url)
-    analysis = await get_ai_analysis(content) if content else None
-    
-    if analysis:
-        conn = await asyncpg.connect(DATABASE_URL)
-        await conn.execute(
-            "INSERT INTO links (user_id, chat_id, url, title, summary, tags) VALUES ($1, $2, $3, $4, $5, $6)",
-            message.from_user.id, message.chat.id, url, analysis["TITLE"], analysis["SUMMARY"], analysis["TAGS"].split(',')
-        )
-        await conn.close()
-        await msg.edit_text(f"✅ **Сохранено!**\n{analysis['TITLE']}", parse_mode=ParseMode.MARKDOWN)
-    else:
-        await msg.edit_text("❌ Не удалось прочитать сайт.")
+    try:
+        content = await asyncio.to_thread(get_page_content, url)
+        analysis = await get_ai_analysis(content) if content else None
+        
+        if analysis:
+            if not DATABASE_URL:
+                raise ValueError("POSTGRES_URL не найден. Проверьте .env")
+
+            conn = await asyncpg.connect(DATABASE_URL)
+            await conn.execute(
+                "INSERT INTO links (user_id, chat_id, url, title, summary, tags) VALUES ($1, $2, $3, $4, $5, $6)",
+                message.from_user.id, message.chat.id, url, analysis["TITLE"], analysis["SUMMARY"], analysis["TAGS"].split(',')
+            )
+            await conn.close()
+            await msg.edit_text(f"✅ **Сохранено!**\n{analysis['TITLE']}", parse_mode=ParseMode.MARKDOWN)
+        else:
+            await msg.edit_text("❌ Не удалось прочитать сайт.")
+    except Exception as e:
+        await msg.edit_text(f"⚠️ Ошибка: {str(e)}")
 
 async def main():
     await dp.start_polling(bot)
