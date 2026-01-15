@@ -3,97 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Ghost Mind</title>
+    <title>Ghost Context</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root {
-            --bg: #050505;
-            --accent: #4f46e5;
-            --glass: rgba(255, 255, 255, 0.03);
-            --border: rgba(255, 255, 255, 0.08);
-        }
-
-        body {
-            background: var(--bg);
-            color: #fff;
-            font-family: -apple-system, sans-serif;
-            margin: 0; padding: 20px;
-            overflow-x: hidden;
-        }
-
-        .glow {
-            position: fixed; width: 300px; height: 300px;
-            background: var(--accent); filter: blur(100px);
-            opacity: 0.15; z-index: -1; border-radius: 50%;
-            top: -100px; right: -100px;
-        }
-
-        .search-bar {
-            position: sticky; top: 0; z-index: 10;
-            background: rgba(5,5,5,0.8); backdrop-filter: blur(10px);
-            padding: 10px 0 20px 0;
-        }
-
-        .search-bar input {
-            width: 100%; background: var(--glass);
-            border: 1px solid var(--border); border-radius: 15px;
-            padding: 14px; color: #fff; outline: none; box-sizing: border-box;
-        }
-
-        .card {
-            background: var(--glass); border: 1px solid var(--border);
-            border-radius: 20px; padding: 20px; margin-bottom: 16px;
-            text-decoration: none; color: inherit; display: block;
-            transition: 0.2s;
-        }
-
-        .card:active { transform: scale(0.98); }
-        .card-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
-        .card-desc { color: #888; font-size: 14px; line-height: 1.5; }
-        
-        .empty-state { text-align: center; color: #555; margin-top: 50px; }
+        body { background: #050505; color: #fff; font-family: sans-serif; margin: 0; padding: 20px; }
+        .card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 15px; padding: 20px; margin-bottom: 12px; text-decoration: none; color: inherit; display: block; }
+        .card-title { font-size: 18px; font-weight: bold; margin-bottom: 5px; }
     </style>
 </head>
 <body>
-    <div class="glow"></div>
-    
-    <div class="search-bar">
-        <input type="text" placeholder="Поиск в твоей базе..." id="s">
-    </div>
-
     <div id="links">
-        {% if links %}
-            {% for link in links %}
-            <a href="{{ link.url }}" class="card">
-                <div class="card-title">{{ link.title }}</div>
-                <div class="card-desc">{{ link.summary }}</div>
-            </a>
-            {% endfor %}
-        {% else %}
-            <div class="empty-state">У тебя пока нет сохраненных ссылок</div>
-        {% endif %}
+        {% for link in links %}
+        <a href="{{ link.url }}" class="card">
+            <div class="card-title">{{ link.title }}</div>
+        </a>
+        {% endfor %}
     </div>
-
     <script>
         const tg = window.Telegram.WebApp;
-        tg.ready();
         tg.expand();
-
-        // МАГИЯ: Передаем user_id из телеграма в URL бэкенда
         const urlParams = new URLSearchParams(window.location.search);
-        const user = tg.initDataUnsafe.user;
-
-        if (user && !urlParams.has('user_id')) {
-            window.location.search = `?user_id=${user.id}`;
+        if (tg.initDataUnsafe.user && !urlParams.has('user_id')) {
+            window.location.search = `?user_id=${tg.initDataUnsafe.user.id}`;
         }
-
-        // Простой поиск
-        document.getElementById('s').addEventListener('input', (e) => {
-            const val = e.target.value.toLowerCase();
-            document.querySelectorAll('.card').forEach(c => {
-                c.style.display = c.innerText.toLowerCase().includes(val) ? '' : 'none';
-            });
-        });
     </script>
 </body>
 </html>
