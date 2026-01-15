@@ -3,99 +3,142 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Context Memory</title>
+    <title>Ghost Memory</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* --- BLUM STYLE VARIABLES --- */
         :root {
-            --bg-color: #000000;          /* Глубокий черный */
-            --card-bg: #1c1c1e;           /* Темно-серый Apple */
-            --text-primary: #ffffff;      /* Чистый белый */
-            --text-secondary: #8e8e93;    /* Серый текст */
-            --accent-color: #ffffff;      /* Акцент (белый, как в Blum) */
-            --search-bg: #2c2c2e;         /* Фон поиска */
-            --tag-bg: #3a3a3c;            /* Фон тегов */
+            --bg-color: #050505;
+            --card-glass: rgba(255, 255, 255, 0.03);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-main: #ffffff;
+            --text-muted: #888888;
+            --accent-glow: rgba(50, 100, 255, 0.3); /* Синий неон */
+            --accent-secondary: rgba(150, 50, 255, 0.2); /* Фиолетовый неон */
         }
 
         body {
             background-color: var(--bg-color);
-            color: var(--text-primary);
-            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif;
             margin: 0;
             padding: 0;
-            -webkit-tap-highlight-color: transparent; /* Убирает синий квадрат при клике */
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        /* --- STICKY HEADER (Стеклянный эффект) --- */
-        .header {
+        /* --- ФОНОВЫЕ ЭФФЕКТЫ (AMBIENT) --- */
+        .ambient-glow {
+            position: fixed;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            filter: blur(90px);
+            z-index: -1;
+            opacity: 0.6;
+            animation: pulse 10s infinite alternate;
+        }
+        .glow-1 { top: -50px; left: -50px; background: var(--accent-glow); }
+        .glow-2 { bottom: -50px; right: -50px; background: var(--accent-secondary); }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.5; }
+            100% { transform: scale(1.2); opacity: 0.7; }
+        }
+
+        /* --- ПОИСК (FLOATING GLASS) --- */
+        .header-container {
             position: sticky;
-            top: 0;
+            top: 10px;
+            margin: 0 16px;
             z-index: 100;
-            background: rgba(0, 0, 0, 0.85); /* Полупрозрачный черный */
-            backdrop-filter: blur(20px);     /* Размытие фона */
-            -webkit-backdrop-filter: blur(20px);
-            padding: 10px 16px;
-            border-bottom: 0.5px solid rgba(255,255,255,0.1);
         }
 
-        .search-box {
-            width: 100%;
-            background: var(--search-bg);
-            border: none;
-            border-radius: 12px;
-            padding: 10px 12px;
-            color: white;
-            font-size: 17px;
-            outline: none;
+        .search-wrapper {
+            background: rgba(20, 20, 20, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 12px 16px;
             display: flex;
             align-items: center;
-        }
-        
-        .search-box::placeholder {
-            color: var(--text-secondary);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            transition: all 0.3s ease;
         }
 
-        /* --- CONTAINER --- */
+        .search-wrapper:focus-within {
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(2px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.7);
+        }
+
+        .search-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-size: 16px;
+            margin-left: 10px;
+            outline: none;
+        }
+
+        .search-icon {
+            color: var(--text-muted);
+            font-size: 18px;
+        }
+
+        /* --- КАРТОЧКИ --- */
         .content {
-            padding: 16px;
-            padding-bottom: 40px;
+            padding: 24px 16px;
+            padding-bottom: 100px; /* Отступ снизу */
         }
 
-        /* --- CARD DESIGN --- */
         .card {
-            background-color: var(--card-bg);
-            border-radius: 18px; /* Сильные скругления */
-            padding: 16px;
-            margin-bottom: 12px;
-            transition: transform 0.1s ease;
-            position: relative;
-            text-decoration: none;
             display: block;
+            text-decoration: none;
+            background: var(--card-glass);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 20px;
+            margin-bottom: 16px;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94), background 0.2s;
+            
+            /* Анимация появления */
+            opacity: 0; 
+            transform: translateY(30px);
+            animation: fadeUp 0.6s forwards cubic-bezier(0.165, 0.84, 0.44, 1);
         }
 
-        /* Анимация нажатия как в приложении */
+        /* Эффект нажатия */
         .card:active {
-            transform: scale(0.97);
-            opacity: 0.8;
+            transform: scale(0.96) !important;
+            background: rgba(255,255,255, 0.07);
+        }
+
+        /* Блик на карточке */
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
         }
 
         .card-title {
-            color: var(--text-primary);
-            font-size: 17px;
-            font-weight: 600;
-            margin-bottom: 6px;
+            color: #fff;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 8px;
             line-height: 1.3;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
+            letter-spacing: -0.5px;
         }
 
         .card-summary {
-            color: var(--text-secondary);
+            color: #aaa;
             font-size: 14px;
-            line-height: 1.4;
-            margin-bottom: 12px;
+            line-height: 1.5;
+            margin-bottom: 16px;
             display: -webkit-box;
             -webkit-line-clamp: 3;
             -webkit-box-orient: vertical;
@@ -105,83 +148,92 @@
         .tags {
             display: flex;
             flex-wrap: wrap;
-            gap: 6px;
+            gap: 8px;
         }
 
         .tag {
-            background: var(--tag-bg);
-            color: var(--text-secondary);
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 500;
+            font-size: 11px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.1);
+            padding: 6px 12px;
+            border-radius: 100px; /* Pill shape */
+            border: 1px solid rgba(255,255,255,0.05);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
-        /* Дата создания (мелкая подпись) */
-        .date {
-            font-size: 11px;
-            color: #555;
-            margin-top: 10px;
-            text-align: right;
+        /* АНИМАЦИЯ ПОЯВЛЕНИЯ */
+        @keyframes fadeUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
-        
-        /* Скрываем скроллбар, но оставляем скролл */
-        ::-webkit-scrollbar {
-            display: none;
-        }
+
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <input type="text" class="search-box" id="searchInput" placeholder="🔍 Поиск по памяти..." onkeyup="filterLinks()">
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+
+    <div class="header-container">
+        <div class="search-wrapper">
+            <span class="search-icon">🔍</span>
+            <input type="text" class="search-input" id="searchInput" placeholder="Поиск в памяти..." autocomplete="off">
+        </div>
     </div>
 
     <div class="content" id="linksContainer">
         {% for link in links %}
-        <a href="{{ link.url }}" target="_blank" class="card">
+        <a href="{{ link.url }}" target="_blank" class="card" style="animation-delay: {{ loop.index0 * 0.05 }}s;">
             <div class="card-title">{{ link.title }}</div>
             <div class="card-summary">{{ link.summary }}</div>
             <div class="tags">
                 {% for tag in link.tags %}
-                <span class="tag">#{{ tag.strip() }}</span>
+                <span class="tag">{{ tag.strip() }}</span>
                 {% endfor %}
             </div>
-            </a>
+        </a>
         {% endfor %}
     </div>
 
     <script>
-        // Инициализация Telegram Web App
         const tg = window.Telegram.WebApp;
         tg.ready();
-        tg.expand(); // Разворачиваем на весь экран
+        tg.expand();
         
-        // Устанавливаем цвета хедера под тему приложения
-        tg.setHeaderColor('#000000'); 
-        tg.setBackgroundColor('#000000');
+        // Устанавливаем цвета хедера черными, чтобы сливалось с фоном
+        tg.setHeaderColor('#050505'); 
+        tg.setBackgroundColor('#050505');
 
-        // Скрипт живого поиска (фильтрация карточек)
-        function filterLinks() {
-            let input = document.getElementById('searchInput');
-            let filter = input.value.toLowerCase();
-            let container = document.getElementById('linksContainer');
-            let cards = container.getElementsByClassName('card');
+        // Живой поиск
+        const searchInput = document.getElementById('searchInput');
+        const container = document.getElementById('linksContainer');
+        const cards = container.getElementsByClassName('card');
 
+        searchInput.addEventListener('keyup', function() {
+            let filter = this.value.toLowerCase();
+            
             for (let i = 0; i < cards.length; i++) {
-                let title = cards[i].getElementsByClassName('card-title')[0];
-                let summary = cards[i].getElementsByClassName('card-summary')[0];
-                let tags = cards[i].getElementsByClassName('tags')[0];
+                let title = cards[i].getElementsByClassName('card-title')[0].textContent;
+                let summary = cards[i].getElementsByClassName('card-summary')[0].textContent;
+                let tags = cards[i].getElementsByClassName('tags')[0].textContent;
                 
-                let textValue = title.textContent + summary.textContent + tags.textContent;
+                let textValue = title + summary + tags;
 
-                if (textValue.toLowerCase().indexOf(filter) > -1) {
+                if (textValue.toLowerCase().includes(filter)) {
                     cards[i].style.display = "";
+                    // Сбрасываем анимацию при поиске, чтобы не мелькало странно
+                    cards[i].style.animation = "none";
+                    cards[i].style.opacity = "1";
+                    cards[i].style.transform = "translateY(0)";
                 } else {
                     cards[i].style.display = "none";
                 }
             }
-        }
+        });
     </script>
 </body>
 </html>
