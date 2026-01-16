@@ -2,23 +2,27 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ghost Context</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { background: #050505; color: #fff; font-family: sans-serif; margin: 0; padding: 20px; }
-        .card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 15px; padding: 20px; margin-bottom: 12px; text-decoration: none; color: inherit; display: block; }
-        .card-title { font-size: 18px; font-weight: bold; margin-bottom: 5px; }
+        body { background: #050505; color: #fff; font-family: -apple-system, sans-serif; padding: 20px; }
+        .card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 16px; margin-bottom: 12px; display: block; text-decoration: none; color: inherit; }
+        .title { font-weight: bold; font-size: 16px; margin-bottom: 6px; }
+        .summary { font-size: 14px; color: #aaa; margin-bottom: 8px; }
+        .tags { font-size: 12px; color: #6366f1; }
     </style>
 </head>
 <body>
-    <div id="links">
-        {% for link in links %}
-        <a href="{{ link.url }}" class="card">
-            <div class="card-title">{{ link.title }}</div>
-        </a>
-        {% endfor %}
-    </div>
+    {% for link in links %}
+    <a href="{{ link.url }}" class="card">
+        <div class="title">{{ link.title }}</div>
+        <div class="summary">{{ link.summary }}</div>
+        {% if link.tags %}
+        <div class="tags">#{{ link.tags }}</div>
+        {% endif %}
+    </a>
+    {% endfor %}
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
