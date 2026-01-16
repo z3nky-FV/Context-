@@ -6,4 +6,3 @@ openai
 beautifulsoup4
 python-dotenv
 jinja2
-pydantic
