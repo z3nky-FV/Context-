@@ -3,7 +3,6 @@ import requests
 from bs4 import BeautifulSoup
 from fastapi import FastAPI, Request
 from fastapi.templating import Jinja2Templates
-from aiogram import Bot, types
 from openai import AsyncOpenAI
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -19,11 +18,12 @@ TOKEN = os.getenv("BOT_TOKEN")
 POSTGRES_URL = os.getenv("POSTGRES_URL")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-bot = Bot(token=TOKEN)
-# Инициализация OpenAI
+# URL для отправки сообщений в Telegram (без aiogram)
+TELEGRAM_API_URL = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+
 ai_client = AsyncOpenAI(api_key=OPENAI_API_KEY)
 
-# --- ТВОЙ СТАРЫЙ ПРОМПТ ---
+# ТВОЙ СТАРЫЙ ПРОМПТ
 SYSTEM_PROMPT = (
     "Ты — ядро Context+. Твоя задача — извлечь смысл. "
     "Обязательно верни ответ СТРОГО в формате:\n"
@@ -33,80 +33,89 @@ SYSTEM_PROMPT = (
     "TAGS: теги через запятую"
 )
 
-# --- БАЗА ДАННЫХ ---
+# --- БАЗА ---
 def get_db_conn():
     return psycopg2.connect(POSTGRES_URL)
 
-# --- ЛОГИКА ИИ ---
-async def ask_openai_analysis(text):
+# --- ОТПРАВКА СООБЩЕНИЯ В TELEGRAM ---
+def send_telegram_message(chat_id, text):
+    try:
+        requests.post(TELEGRAM_API_URL, json={
+            "chat_id": chat_id,
+            "text": text,
+            "parse_mode": "Markdown"
+        }, timeout=5)
+    except Exception as e:
+        print(f"Ошибка отправки в TG: {e}")
+
+# --- AI ---
+async def ask_openai(text):
     try:
         response = await ai_client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": f"Текст сайта:\n\n{text[:6000]}"}
+                {"role": "user", "content": f"Текст:\n{text[:5000]}"}
             ]
         )
         return response.choices[0].message.content
-    except Exception as e:
-        print(f"Ошибка OpenAI: {e}")
-        return "TITLE: Ошибка\nSUMMARY: Не удалось обработать\nTAGS: error"
+    except:
+        return "TITLE: Ошибка\nSUMMARY: Сбой ИИ\nTAGS: error"
 
-def parse_ai_response(ai_text):
+def parse_ai(text):
     data = {"TITLE": "...", "SUMMARY": "...", "TAGS": ""}
-    for line in ai_text.split('\n'):
+    for line in text.split('\n'):
         if "TITLE:" in line: data["TITLE"] = line.split("TITLE:")[1].strip()
         if "SUMMARY:" in line: data["SUMMARY"] = line.split("SUMMARY:")[1].strip()
         if "TAGS:" in line: data["TAGS"] = line.split("TAGS:")[1].strip()
     return data
 
-# --- WEBHOOK (Бот) ---
+# --- WEBHOOK ---
 @app.post(f"/api/webhook/{TOKEN}")
 async def bot_webhook(request: Request):
     try:
-        update_data = await request.json()
-        update = types.Update(**update_data)
+        data = await request.json()
         
-        if update.message and update.message.text:
-            msg = update.message
-            if msg.text.startswith("http"):
+        # Проверяем, есть ли сообщение
+        if "message" in data and "text" in data["message"]:
+            msg = data["message"]
+            chat_id = msg["chat"]["id"]
+            text = msg["text"]
+            user_id = msg["from"]["id"]
+
+            if text.startswith("http"):
                 # 1. Скрейпинг
                 try:
-                    r = requests.get(msg.text, timeout=5, headers={"User-Agent": "Mozilla/5.0"})
+                    r = requests.get(text, timeout=5, headers={"User-Agent": "Mozilla/5.0"})
                     soup = BeautifulSoup(r.text, 'html.parser')
                     raw_text = soup.get_text()
                 except:
-                    raw_text = "Текст недоступен"
+                    raw_text = "Сайт недоступен"
 
-                # 2. Анализ OpenAI
-                ai_raw = await ask_openai_analysis(raw_text)
-                parsed = parse_ai_response(ai_raw)
+                # 2. OpenAI
+                ai_res = await ask_openai(raw_text)
+                parsed = parse_ai(ai_res)
 
-                # 3. Сохранение в БД (с тегами и user_id)
+                # 3. База
                 conn = get_db_conn()
                 cur = conn.cursor()
-                # Убедись, что в базе есть колонка tags! Если нет - убери её из запроса ниже
                 cur.execute(
                     "INSERT INTO links (url, title, summary, tags, user_id) VALUES (%s, %s, %s, %s, %s)",
-                    (msg.text, parsed["TITLE"], parsed["SUMMARY"], parsed["TAGS"], msg.from_user.id)
+                    (text, parsed["TITLE"], parsed["SUMMARY"], parsed["TAGS"], user_id)
                 )
                 conn.commit()
                 cur.close()
                 conn.close()
 
-                # 4. Ответ пользователю
-                await bot.send_message(
-                    msg.chat.id, 
-                    f"✅ **{parsed['TITLE']}**\n\n_{parsed['SUMMARY']}_\n\n#{parsed['TAGS']}", 
-                    parse_mode="Markdown"
-                )
+                # 4. Ответ
+                send_telegram_message(chat_id, f"✅ **{parsed['TITLE']}**\n\n_{parsed['SUMMARY']}_")
         
         return {"status": "ok"}
     except Exception as e:
-        print(f"Webhook Error: {e}")
+        print(f"Error: {e}")
         return {"status": "error"}
 
-# --- MINI APP (Сайт) ---
+# --- MINI APP ---
 @app.get("/")
 async def index(request: Request, user_id: int = None):
     links = []
