@@ -3,33 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ghost Context</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        body { background: #050505; color: #fff; font-family: -apple-system, sans-serif; padding: 20px; }
-        .card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 16px; margin-bottom: 12px; display: block; text-decoration: none; color: inherit; }
-        .title { font-weight: bold; font-size: 16px; margin-bottom: 6px; }
-        .summary { font-size: 14px; color: #aaa; margin-bottom: 8px; }
-        .tags { font-size: 12px; color: #6366f1; }
-    </style>
+    <title>Context+ Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    {% for link in links %}
-    <a href="{{ link.url }}" class="card">
-        <div class="title">{{ link.title }}</div>
-        <div class="summary">{{ link.summary }}</div>
-        {% if link.tags %}
-        <div class="tags">#{{ link.tags }}</div>
-        {% endif %}
-    </a>
-    {% endfor %}
-    <script>
-        const tg = window.Telegram.WebApp;
-        tg.expand();
-        const urlParams = new URLSearchParams(window.location.search);
-        if (tg.initDataUnsafe.user && !urlParams.has('user_id')) {
-            window.location.search = `?user_id=${tg.initDataUnsafe.user.id}`;
-        }
-    </script>
+<body class="bg-gray-900 text-white p-5">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-8 text-blue-400">Context+ Сохраненное</h1>
+        
+        <div class="grid gap-6">
+            {% for link in links %}
+            <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-lg">
+                <h2 class="text-xl font-bold text-blue-300 mb-2">{{ link.title }}</h2>
+                <p class="text-gray-400 mb-4">{{ link.summary }}</p>
+                <div class="flex justify-between items-center">
+                    <span class="text-sm text-gray-500 italic">#{{ link.tags }}</span>
+                    <a href="{{ link.url }}" target="_blank" class="text-blue-500 hover:underline">Открыть оригинал →</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
 </body>
 </html>
